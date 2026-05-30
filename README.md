@@ -43,6 +43,8 @@ A suíte de testes usa SQLite in-memory; nenhum setup necessário.
 
 ## Exemplos de requisição
 
+> **Nota:** Os exemplos abaixo usam `curl` no estilo Linux/macOS. No Windows, use Git Bash ou WSL (caracteres acentuados podem não funcionar no Git Bash), ou adapte para `Invoke-WebRequest` no PowerShell.
+
 ### Criar um cliente (`POST /clients`)
 
 ```bash
