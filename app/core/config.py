@@ -14,5 +14,7 @@ class Settings(BaseSettings):
     database_url: str = 'sqlite:///./client_manager.db'
     log_level: str = 'INFO'
 
+    pipefy_token: str = ''
+
 
 settings: Settings = Settings()
