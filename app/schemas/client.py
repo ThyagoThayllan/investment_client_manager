@@ -12,8 +12,8 @@ class ClientStatus(str, Enum):
 
 
 class Priority(str, Enum):
-    HIGH = 'prioridade_alta'
-    NORMAL = 'prioridade_normal'
+    HIGH = 'Alta'
+    NORMAL = 'Normal'
 
 
 class ClientCreate(BaseSchema):
