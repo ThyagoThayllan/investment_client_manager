@@ -4,8 +4,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.integrations.pipefy.base import PipefyClient
-from app.integrations.pipefy.client import FakePipefyClient
+from app.integrations.pipefy.client import PipefyClient
 from app.repositories.client_repository import ClientRepository
 from app.repositories.event_repository import EventRepository
 from app.services.client_service import ClientService
@@ -15,7 +14,7 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 
 def get_pipefy_client() -> PipefyClient:
-    return FakePipefyClient()
+    return PipefyClient()
 
 
 PipefyClientDep = Annotated[PipefyClient, Depends(get_pipefy_client)]
