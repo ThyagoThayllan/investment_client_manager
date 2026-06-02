@@ -1,20 +1,17 @@
-import json
-import logging
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
-from app.integrations.pipefy.client import FakePipefyClient
+from app.integrations.pipefy.client import PipefyClient
 from app.models.client import Client
 from app.schemas.client import ClientStatus, Priority
 
 
-class TestFakePipefyClient:
-    LOGGER_NAME = 'app.integrations.pipefy.client'
-
+class TestPipefyClient:
     @pytest.fixture
-    def pipefy(self) -> FakePipefyClient:
-        return FakePipefyClient()
+    def pipefy(self) -> PipefyClient:
+        return PipefyClient()
 
     @pytest.fixture
     def sample_client(self) -> Client:
@@ -26,46 +23,54 @@ class TestFakePipefyClient:
             status=ClientStatus.AWAITING_REVIEW.value,
         )
 
-    @staticmethod
-    def _captured_payload(caplog: LogCaptureFixture) -> dict[str, object]:
-        record = next(
-            r for r in caplog.records if 'Pipefy GraphQL payload' in r.getMessage()
-        )
-        raw = record.getMessage().split('Pipefy GraphQL payload: ', 1)[1]
-        return json.loads(raw)
-
-    def test_when_creating_card_logs_payload_with_correct_structure(
+    def test_create_card_returns_card_id(
         self,
-        pipefy: FakePipefyClient,
+        pipefy: PipefyClient,
         sample_client: Client,
-        caplog: LogCaptureFixture,
     ) -> None:
-        with caplog.at_level(logging.INFO, logger=self.LOGGER_NAME):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'data': {'createCard': {'card': {'id': 'card_123'}}}}
+
+        with patch('app.integrations.pipefy.base.requests.post', return_value=mock_response) as mock_post:
             card_id = pipefy.create_card(sample_client)
 
-        payload = self._captured_payload(caplog)
-        assert 'createCard' in payload['query']
-        assert 'CreateCardInput!' in payload['query']
-        assert payload['variables']['input']['pipe_id'] == 'FAKE_PIPE_ID'
+        assert card_id == 'card_123'
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        fields = kwargs['json']['variables']['input']['fields_attributes']
+        assert {'field_id': 'nome_do_cliente', 'field_value': 'João'} in fields
+        assert {'field_id': 'email', 'field_value': 'joao@example.com'} in fields
 
-        fields = payload['variables']['input']['fields_attributes']
-        assert {'field_id': 'cliente_nome', 'field_value': 'João'} in fields
-        assert {'field_id': 'cliente_email', 'field_value': 'joao@example.com'} in fields
-        assert card_id.startswith('card_fake_')
-
-    def test_when_marking_card_as_processed_logs_payload_with_status_and_priority(
+    def test_create_card_sends_correct_mutation(
         self,
-        pipefy: FakePipefyClient,
-        caplog: LogCaptureFixture,
+        pipefy: PipefyClient,
+        sample_client: Client,
     ) -> None:
-        with caplog.at_level(logging.INFO, logger=self.LOGGER_NAME):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'data': {'createCard': {'card': {'id': 'card_456'}}}}
+
+        with patch('app.integrations.pipefy.base.requests.post', return_value=mock_response) as mock_post:
+            pipefy.create_card(sample_client)
+
+        _, kwargs = mock_post.call_args
+        assert 'createCard' in kwargs['json']['query']
+        assert 'CreateCardInput!' in kwargs['json']['query']
+
+    def test_mark_card_as_processed_sends_correct_mutation(
+        self,
+        pipefy: PipefyClient,
+    ) -> None:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'data': {'updateFieldsValues': {'success': True}}}
+
+        with patch('app.integrations.pipefy.base.requests.post', return_value=mock_response) as mock_post:
             pipefy.mark_card_as_processed(card_id='card_456', priority=Priority.HIGH)
 
-        payload = self._captured_payload(caplog)
-        assert 'updateFieldsValues' in payload['query']
-        assert 'UpdateFieldsValuesInput!' in payload['query']
-        assert payload['variables']['input']['nodeId'] == 'card_456'
-
-        values = payload['variables']['input']['values']
+        _, kwargs = mock_post.call_args
+        assert 'updateFieldsValues' in kwargs['json']['query']
+        assert 'UpdateFieldsValuesInput!' in kwargs['json']['query']
+        variables = kwargs['json']['variables']['input']
+        assert variables['nodeId'] == 'card_456'
+        values = variables['values']
         assert {'fieldId': 'status', 'value': 'Processado'} in values
-        assert {'fieldId': 'priority', 'value': 'prioridade_alta'} in values
+        assert {'fieldId': 'prioridade', 'value': 'Alta'} in values

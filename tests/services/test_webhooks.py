@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.core.exceptions import ClientNotFound
-from app.integrations.pipefy.base import PipefyClient
+from app.integrations.pipefy.client import PipefyClient
 from app.models.client import Client
 from app.repositories.client_repository import ClientRepository
 from app.repositories.event_repository import EventRepository
