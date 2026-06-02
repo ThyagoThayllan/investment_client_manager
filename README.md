@@ -114,9 +114,9 @@ Service (regras de negócio)
     │
     ├──▶ Repository (SQLAlchemy)
     │
-    └──▶ Integration (PipefyClient ABC)
+    └──▶ Integration (PipefyBase ABC)
                 │
-                └─ FakePipefyClient (implementação atual, loga os payloads)
+                └─ PipefyClient (implementação real, POST GraphQL)
 ```
 
 Decisões-chave:
@@ -132,7 +132,7 @@ Decisões-chave:
 app/
 ├── api/v1/endpoints/    # Routers do FastAPI
 ├── core/                # config, database, exceptions
-├── integrations/pipefy/ # PipefyClient ABC + FakePipefyClient + mutations GraphQL
+├── integrations/pipefy/ # PipefyBase ABC + PipefyClient + mutations GraphQL
 ├── models/              # Models SQLAlchemy
 ├── repositories/        # Camada de acesso a dados
 ├── schemas/             # Schemas Pydantic + enums
