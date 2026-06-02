@@ -1,5 +1,5 @@
 from app.core.exceptions import ClientNotFound
-from app.integrations.pipefy.base import PipefyClient
+from app.integrations.pipefy.client import PipefyClient
 from app.models.processed_event import ProcessedEvent
 from app.repositories.client_repository import ClientRepository
 from app.repositories.event_repository import EventRepository
