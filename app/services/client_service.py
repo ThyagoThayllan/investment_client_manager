@@ -1,3 +1,4 @@
+from app.core.exceptions import DuplicatedClient
 from app.integrations.pipefy.client import PipefyClient
 from app.models.client import Client
 from app.repositories.client_repository import ClientRepository
@@ -15,8 +16,13 @@ class ClientService:
         self.pipefy_client = pipefy_client
 
     def create(self, payload: ClientCreate) -> Client:
+        email = payload.email
+
+        if self.repository.get_by_email(email):
+            raise DuplicatedClient(email)
+
         client = Client(
-            email=payload.email,
+            email=email,
             name=payload.name,
             patrimony=payload.patrimony,
             request_type=payload.request_type,
