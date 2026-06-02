@@ -1,4 +1,4 @@
-from app.integrations.pipefy.base import PipefyClient
+from app.integrations.pipefy.client import PipefyClient
 from app.models.client import Client
 from app.repositories.client_repository import ClientRepository
 from app.schemas.client import ClientCreate
