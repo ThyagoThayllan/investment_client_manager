@@ -1,12 +1,9 @@
-import logging
 import requests
 from abc import ABC
 from abc import abstractmethod
 
 from app.core.config import settings
 from app.models.client import Client
-
-logger = logging.getLogger(__name__)
 
 
 class PipefyBase(ABC):
