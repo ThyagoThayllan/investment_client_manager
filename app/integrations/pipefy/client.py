@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class PipefyClient(PipefyBase):
-    PIPE_ID = 'pipe_id'
+    PIPE_ID: int = 0
 
     def create_card(self, client: Client) -> str:
         variables = {
