@@ -1,13 +1,27 @@
+import logging
+import requests
 from abc import ABC
 from abc import abstractmethod
 
+from app.core.config import settings
 from app.models.client import Client
-from app.schemas.client import Priority
+
+logger = logging.getLogger(__name__)
 
 
-class PipefyClient(ABC):
+class PipefyBase(ABC):
+    PIPEFY_API_URL = 'https://api.pipefy.com/graphql'
+
+    def _post(self, mutation: str, variables: dict) -> dict:
+        payload = {'query': mutation.strip(), 'variables': variables}
+
+        response = requests.post(
+            self.PIPEFY_API_URL,
+            headers={'Authorization': f'Bearer {settings.pipefy_token}'},
+            json=payload,
+        )
+
+        return response.json()
+
     @abstractmethod
     def create_card(self, client: Client) -> str: ...
-
-    @abstractmethod
-    def mark_card_as_processed(self, card_id: str, priority: Priority) -> None: ...
