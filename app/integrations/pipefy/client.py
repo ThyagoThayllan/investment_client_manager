@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class PipefyClient(PipefyBase):
+    # NOTE: Your pipe id in Pipefy, you can get it from your pipe URL, e.g.:
+    #       https://app.pipefy.com/pipes/123 -> PIPE_ID = 123
     PIPE_ID: int = 0
 
     def create_card(self, client: Client) -> str:
