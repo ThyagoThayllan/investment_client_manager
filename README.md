@@ -1,6 +1,6 @@
 # Client Manager
 
-Esqueleto de um sistema interno de uma empresa de investimentos que gerencia clientes e seu patrimônio investido, mapeando ações para o Pipefy via GraphQL. As chamadas ao Pipefy não são enviadas pela rede — os payloads GraphQL são estruturados fielmente conforme a documentação oficial do Pipefy e logados por um client fake, pronto para ser substituído por uma implementação HTTP real.
+Sistema interno de uma empresa de investimentos que gerencia clientes e seu patrimônio investido, integrando-se ao Pipefy via GraphQL. As chamadas são enviadas de forma real para a API do Pipefy (`https://api.pipefy.com/graphql`) usando autenticação por Bearer token.
 
 ## Stack
 
@@ -9,6 +9,7 @@ Esqueleto de um sistema interno de uma empresa de investimentos que gerencia cli
 - **Pydantic v2** — validação de requisição e resposta
 - **SQLAlchemy 2.0** — ORM
 - **SQLite** — banco de dados local (arquivo `client_manager.db`)
+- **requests** — cliente HTTP para chamadas à API GraphQL do Pipefy
 - **pytest** — testes
 
 ## Executando localmente
@@ -27,11 +28,19 @@ source venv/bin/activate
 # 3. Instalar dependências
 pip install -r requirements.txt
 
-# 4. Subir a API
-uvicorn app.main:app --reload
+# 4. Configurar variáveis de ambiente
+cp .env.example .env
+# Edite .env e preencha PIPEFY_TOKEN com seu token de acesso pessoal do Pipefy
+
+# 5. Subir a API
+uvicorn app.main:app --reload --port=8000
 ```
 
 A API roda em `http://localhost:8000`. Documentação interativa em `http://localhost:8000/docs`.
+
+> **Variáveis de ambiente obrigatória para integração com Pipefy**
+>
+> `PIPEFY_TOKEN`: Token de acesso pessoal do Pipefy (Personal Access Token). Obtido em **Pipefy → Perfil → Personal access tokens**. https://app.pipefy.com/tokens
 
 ## Executando os testes
 
@@ -69,11 +78,11 @@ Resposta (`201 Created`):
   "patrimony": 250000.0,
   "status": "Aguardando Análise",
   "priority": null,
-  "card_id": "card_fake_ab12cd34"
+  "card_id": "303886059"
 }
 ```
 
-A aplicação loga o payload GraphQL `createCard` que seria enviado ao Pipefy.
+A aplicação envia a mutation GraphQL `createCard` ao Pipefy e persiste o `id` retornado no campo `card_id`.
 
 ### Simular um webhook do Pipefy (`POST /webhooks/pipefy/card-updated`)
 
@@ -90,9 +99,9 @@ curl -X POST http://localhost:8000/webhooks/pipefy/card-updated \
 
 Comportamento:
 
-- Calcula a prioridade com base no patrimônio do cliente: `>= 200000` → `prioridade_alta`, caso contrário `prioridade_normal`.
-- Loga o payload GraphQL `updateFieldsValues` (status + prioridade) que seria enviado ao Pipefy.
+- Calcula a prioridade com base no patrimônio do cliente: `>= 200000` → `Alta`, caso contrário `Normal`.
 - Atualiza o `status` do cliente para `Processado` e persiste a prioridade calculada.
+- Envia a mutation GraphQL `updateFieldsValues` (status + prioridade) ao Pipefy.
 - Registra o `event_id` para que o mesmo webhook seja ignorado em reenvios.
 
 Respostas possíveis:
@@ -116,15 +125,8 @@ Service (regras de negócio)
     │
     └──▶ Integration (PipefyBase ABC)
                 │
-                └─ PipefyClient (implementação real, POST GraphQL)
+                └─ PipefyClient (integração com o funil de clientes do Pipefy via POST GraphQL)
 ```
-
-Decisões-chave:
-
-- **Classe `Base` única** em `app/models/base.py` carrega as colunas compartilhadas (`id`, `created_at`, `updated_at`); models concretos herdam e adicionam seus próprios campos.
-- **`BaseRepository[Model]` genérico** centraliza o CRUD; repositórios específicos adicionam apenas suas consultas.
-- **O client do Pipefy é uma ABC**, injetada via `Depends`. Trocar o fake por uma implementação HTTP real não exige mudanças na camada de serviço (Dependency Inversion).
-- **Schemas separados dos models**: Pydantic na borda da API, SQLAlchemy na borda da persistência. O `Field(alias=...)` permite que a API aceite as chaves em português exigidas pelo enunciado enquanto o código usa nomes de atributos em inglês.
 
 ## Estrutura do projeto
 
@@ -132,11 +134,11 @@ Decisões-chave:
 app/
 ├── api/v1/endpoints/    # Routers do FastAPI
 ├── core/                # config, database, exceptions
-├── integrations/pipefy/ # PipefyBase ABC + PipefyClient + mutations GraphQL
+├── integrations/pipefy/ # Integração com Pipefy + mutations GraphQL
 ├── models/              # Models SQLAlchemy
 ├── repositories/        # Camada de acesso a dados
 ├── schemas/             # Schemas Pydantic + enums
-├── services/            # Regras de negócio
+├── services/            # Camada de regras de negócio
 └── main.py              # Factory do FastAPI + lifespan
 tests/                   # Espelha a estrutura de app/
 ```
