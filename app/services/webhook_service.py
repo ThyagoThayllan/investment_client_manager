@@ -1,3 +1,4 @@
+from app.core.config import settings
 from app.core.exceptions import ClientNotFound
 from app.integrations.pipefy.client import PipefyClient
 from app.models.processed_event import ProcessedEvent
@@ -37,10 +38,11 @@ class WebhookService:
 
         priority = self._resolve_priority(client.patrimony)
 
-        self.pipefy_client.mark_card_as_processed(
-            card_id=event.card_id,
-            priority=priority,
-        )
+        if settings.pipefy_token:
+            self.pipefy_client.mark_card_as_processed(
+                card_id=event.card_id,
+                priority=priority,
+            )
 
         client.status = ClientStatus.PROCESSED.value
         client.priority = priority.value

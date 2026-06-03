@@ -1,3 +1,6 @@
+import uuid
+
+from app.core.config import settings
 from app.core.exceptions import DuplicatedClient
 from app.integrations.pipefy.client import PipefyClient
 from app.models.client import Client
@@ -31,7 +34,10 @@ class ClientService:
 
         self.repository.add(client)
 
-        client.card_id = self.pipefy_client.create_card(client)
+        if settings.pipefy_token:
+            client.card_id = self.pipefy_client.create_card(client)
+        else:
+            client.card_id = f'fake_card_id_{uuid.uuid4()}'
 
         self.repository.commit()
         self.repository.refresh(client)
